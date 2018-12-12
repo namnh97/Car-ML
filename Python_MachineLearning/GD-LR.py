@@ -71,3 +71,4 @@ def myGD(w_init, grad, eta):
 w_init = np.array([[2], [1]])
 (w1, it1) = myGD(w_init, grad, 1)
 print("Solution found by GD: w = ", w1[-1].T, ',\nafter %d iterations.' %(it1 + 1))
+
