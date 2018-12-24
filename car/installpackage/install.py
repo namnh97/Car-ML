@@ -1,4 +1,4 @@
-
+y
 import os
 
 # Run this script from within an anaconda virtual environment to install the required packages
