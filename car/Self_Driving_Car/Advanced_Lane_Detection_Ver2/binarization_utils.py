@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import glob
 import matplotlib.pyplot as plt
-
+import os.path as path
 
 # selected threshold to highlight yellow lines
 yellow_HSV_th_min = np.array([0, 70, 70])

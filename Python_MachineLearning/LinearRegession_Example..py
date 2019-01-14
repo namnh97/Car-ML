@@ -21,7 +21,7 @@ Xbar = np.concatenate((one, X), axis = 1)
 A = np.dot(Xbar.T, Xbar)
 b = np.dot(Xbar.T, y)
 w = np.dot(np.linalg.pinv(A), b)
-
+print(Xbar.T)
 print('W = ', w)
 
 w_0 = w[0][0]

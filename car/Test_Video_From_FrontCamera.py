@@ -123,18 +123,22 @@ def main():
 	client.confirmConnection()
 	client.enableApiControl(True)
 
-#	controlCar(client)
-	
-#	while True:
-	responses = client.simGetImages([airsim.ImageRequest("0", airsim.ImageType.Scene, False, False)])
-	for response in responses:
-		img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8) 
-		img_rgba = img1d.reshape(response.height, response.width, 4)  
-#		img_rgba = np.flipud(img_rgba)
-#		airsim.write_png(os.path.normpath(filename + 'inputDetectLine3.png'), img_rgba) 
-		img_with_lines = detectLane(img_rgba)
-		cv2.imshow("Display image", img_with_lines)
-		cv2.waitKey(0)
+	controlCar(client)
+	import time
+	while True:
+		responses = client.simGetImages([airsim.ImageRequest("0", airsim.ImageType.Scene, False, False)])
+		for response in responses:
+			start = time.time()
+			img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8) 
+			img_rgba = img1d.reshape(response.height, response.width, 4)  
+	#		img_rgba = np.flipud(img_rgba)
+	#		airsim.write_png(os.path.normpath(filename + 'inputDetectLine3.png'), img_rgba) 
+	#		img_with_lines = detectLane(img_rgba)
+			img_rgba = cv2.cvtColor(img_rgba, cv2.COLOR_BGRA2BGR)
+			cv2.imshow("Display image", img_rgba)
+			print("The processing time", time.time() - start)
+			if cv2.waitKey(1) & 0xFF == ord('q'):
+					break
 	client.enableApiControl(False)
 #			cv2.imshow('Display window', img_with_lines)
 #			if cv2.waitKey(1) & 0xFF == ord('q'):

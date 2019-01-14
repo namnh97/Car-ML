@@ -744,11 +744,12 @@ def main():
     """
 
     filename = "C:/Users/namnh997/Documents/GitHub/Car-ML/car/Input/"
-
+    import time
     moveForward(client)
     while True:
         responses = client.simGetImages([airsim.ImageRequest("0", airsim.ImageType.Scene, False, False)])
         for response in responses:
+            start = time.time()
             img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8) 
             img_rgba = img1d.reshape(response.height, response.width, 4) 
             img_rgba1 = np.flipud(img_rgba)
@@ -756,6 +757,7 @@ def main():
             img_rgba = cv2.cvtColor(img_rgba, cv2.COLOR_BGRA2BGR)
             img_rgba = ld.process_image(img_rgba)
             cv2.imshow('Display window', img_rgba)
+            print('Processing time', time.time() - start)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                  break
     client.enableApiControl(False)

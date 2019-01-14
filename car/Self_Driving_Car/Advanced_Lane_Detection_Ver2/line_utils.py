@@ -4,6 +4,7 @@ import glob
 import collections
 import matplotlib.pyplot as plt
 #from calibration_utils import calibrate_camera, undistort
+from calibration_utils import *
 from binarization_utils import binarize
 from perspective_utils import birdeye
 from globals import ym_per_pix, xm_per_pix
@@ -60,12 +61,17 @@ class Line:
         """
         h, w, c = mask.shape
 
-        plot_y = np.linspace(0, h - 1, h)
+        plot_y = np.linspace(0, h - 1, h) #This is height.
+        
         coeffs = self.average_fit if average else self.last_fit_pixel
-
+        
+#        print("This is plot_y", plot_y)
+        
         line_center = coeffs[0] * plot_y ** 2 + coeffs[1] * plot_y + coeffs[2]
         line_left_side = line_center - line_width // 2
         line_right_side = line_center + line_width // 2
+        
+#        print("This is line left side", line_left_side)
 
         # Some magic here to recast the x and y points into usable format for cv2.fillPoly()
         pts_left = np.array(list(zip(line_left_side, plot_y)))
@@ -357,24 +363,25 @@ def draw_back_onto_the_road(img_undistorted, Minv, line_lt, line_rt, keep_state)
     return blend_onto_road
 
 #
-#if __name__ == '__main__':
+if __name__ == '__main__':
 #
-#    line_lt, line_rt = Line(buffer_len=10), Line(buffer_len=10)
+    line_lt, line_rt = Line(buffer_len=10), Line(buffer_len=10)
 #
 #    ret, mtx, dist, rvecs, tvecs = calibrate_camera(calib_images_dir='camera_cal')
 #
-#    # show result on test images
-#    for test_img in glob.glob('test_images/*.jpg'):
+    image_paths = glob.glob(path.join('input', '*.png'))
+    for test_img in image_paths:
 #
-#        img = cv2.imread(test_img)
+        img = cv2.imread(test_img)
 #
 #        img_undistorted = undistort(img, mtx, dist, verbose=False)
+        img_undistorted = calibrate(img)
 #
-#        img_binary = binarize(img_undistorted, verbose=False)
+        img_binary = binarize(img_undistorted, verbose=False)
 #
-#        img_birdeye, M, Minv = birdeye(img_binary, verbose=False)
+        img_birdeye, M, Minv = birdeye(img_binary, verbose=False)
 #
-#        line_lt, line_rt, img_out = get_fits_by_sliding_windows(img_birdeye, line_lt, line_rt, n_windows=7, verbose=True)
+        line_lt, line_rt, img_out = get_fits_by_sliding_windows(img_birdeye, line_lt, line_rt, n_windows=7, verbose=True)
 
 
 

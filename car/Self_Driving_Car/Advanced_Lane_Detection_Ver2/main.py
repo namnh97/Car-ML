@@ -1,15 +1,20 @@
 import cv2
 import os
 import matplotlib.pyplot as plt
-from calibration_utils import calibrate
+from calibration_utils import check_calibrate, undistort_image
 from binarization_utils import binarize
 from perspective_utils import birdeye
 from line_utils import get_fits_by_sliding_windows, draw_back_onto_the_road, Line, get_fits_by_previous_fits
-from moviepy.editor import VideoFileClip
+#from moviepy.editor import VideoFileClip
 import numpy as np
 from globals import xm_per_pix, time_window
 
-
+#=================AirSim==========================
+import airsim
+from Control import *
+client = airsim.CarClient()
+client.confirmConnection()
+#==========================================
 import time
 import os.path as path
 import glob
@@ -17,7 +22,8 @@ import glob
 processed_frames = 0                    # counter of frames processed (when processing video)
 line_lt = Line(buffer_len=time_window)  # line on the left of the lane
 line_rt = Line(buffer_len=time_window)  # line on the right of the lane
-
+calibration_cache = 'camera_cal/calibration_data.pickle'
+opts, ipts = check_calibrate(calibration_cache)
 
 def prepare_out_blend_frame(blend_on_road, img_binary, img_birdeye, img_fit, line_lt, line_rt, offset_meter):
     """
@@ -87,9 +93,24 @@ def compute_offset_from_center(line_lt, line_rt, frame_width):
         line_rt_bottom = np.mean(line_rt.all_x[line_rt.all_y > 0.95 * line_rt.all_y.max()])
         lane_width = line_rt_bottom - line_lt_bottom
         midpoint = frame_width / 2
+        print("\n New process")
+        print("bottom left", line_lt_bottom)
+        print("bottom right", line_rt_bottom)
+        print("Lane width", lane_width)
+        if line_lt_bottom >  40 and line_rt_bottom > 190:
+            print("turn right")
+            turnRight()
+        elif line_rt_bottom < 190 and line_lt_bottom < 40:
+            print("turn left")
+            turnLeft()
+        else:
+            print("mid")
+            goForward()
+            
         offset_pix = abs((line_lt_bottom + lane_width / 2) - midpoint)
         offset_meter = xm_per_pix * offset_pix
     else:
+        goForward()
         offset_meter = -1
 
     return offset_meter
@@ -106,7 +127,8 @@ def process_pipeline(frame, keep_state=True):
     global line_lt, line_rt, processed_frames
 
     # undistort the image using coefficients found in calibration
-    img_undistorted = calibrate(frame)
+#    img_undistorted = calibrate(frame)
+    img_undistorted = undistort_image(frame, opts, ipts)
 
     # binarize the frame s.t. lane lines are highlighted as much as possible
     img_binary = binarize(img_undistorted, verbose=False)
@@ -122,13 +144,13 @@ def process_pipeline(frame, keep_state=True):
 
     # compute offset in meter from center of the lane
     offset_meter = compute_offset_from_center(line_lt, line_rt, frame_width=frame.shape[1])
-
+    
     # draw the surface enclosed by lane lines back onto the original frame
     blend_on_road = draw_back_onto_the_road(img_undistorted, Minv, line_lt, line_rt, keep_state)
 
     # stitch on the top of final output images from different steps of the pipeline
-    blend_output = prepare_out_blend_frame(blend_on_road, img_binary, img_birdeye, img_fit, line_lt, line_rt, offset_meter)
-
+#    blend_output = prepare_out_blend_frame(blend_on_road, img_binary, img_birdeye, img_fit, line_lt, line_rt, offset_meter)
+    blend_output = blend_on_road
     processed_frames += 1
 
     return blend_output
@@ -145,14 +167,54 @@ def testFullImage():
         print(end - start)
     
 def testOneImage():
-    img = cv2.imread('input/img_0_0_1545471200145090500.png')
+    img = cv2.imread('input/img_0_0_1545471200366026100.png')
     img = process_pipeline(img, keep_state = False)
     plt.imshow(img)
         
-
+def processAirSim_OneImage():
+    client.enableApiControl(True)
+    responses = client.simGetImages([airsim.ImageRequest("0", airsim.ImageType.Scene, False, False)])
+    for response in responses:
+        start = time.time()
+        client.simPause(True)
+        img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8) 
+        img_rgba = img1d.reshape(response.height, response.width, 4) 
+#        img_rgba1 = np.flipud(img_rgba)
+#        airsim.write_png(os.path.normpath(filename + 'inputDetectLine5.png'), img_rgba1) 
+        img_rgba = cv2.cvtColor(img_rgba, cv2.COLOR_BGRA2BGR)        
+        processed_img = process_pipeline(img_rgba)
+        print("Processing Time", time.time() - start)
+        client.simPause(False)
+        plt.imshow(processed_img)
+        plt.show()
+    client.enableApiControl(False)
+        
+def processAirSim():
+    client.enableApiControl(True)
+    while True:
+        responses = client.simGetImages([airsim.ImageRequest("0", airsim.ImageType.Scene, False, False)])
+        for response in responses:
+            start = time.time()
+            client.simPause(True)
+            img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8) 
+            img_rgba = img1d.reshape(response.height, response.width, 4) 
+#            img_rgba1 = np.flipud(img_rgba)
+#            airsim.write_png(os.path.normpath(filename + 'inputDetectLine5.png'), img_rgba1) 
+            img_rgba = cv2.cvtColor(img_rgba, cv2.COLOR_BGRA2BGR)
+#            img_rgba = ld.process_image(img_rgba)
+            img_rgba = process_pipeline(img_rgba)
+            cv2.imshow('Display window', img_rgba)
+            print('Processing time ', time.time() - start)
+            client.simPause(False)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                 break
+    client.enableApiControl(False)        
 if __name__ == '__main__':
 #    testFullImage()
-    testOneImage()    
+#    testOneImage()    
+#    processAirSim_OneImage()
+    processAirSim()
+    
     
     
     

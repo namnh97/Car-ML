@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 import math
 import airsim
 from importlib import reload
-from collection import utils; reload(utils)
-from collection.utils import *
+#from collection import utils; reload(utils)
+#from collection.utils import *
 
 #The folders save data 
 calibration_dir = "Input/camera_cal"
@@ -715,7 +715,7 @@ def main():
     client.enableApiControl(True)
             
     #read image and process
-    img = cv2.imread('Input/inputDetectLine.png', cv2.IMREAD_COLOR)
+    img = cv2.imread('Input/img_0_0_1545471200366026100.png', cv2.IMREAD_COLOR)
     (img_height, img_weight) = (img.shape[0] - 1, img.shape[1] - 1)
     pts = np.array([[img_weight/(3.9), img_height/(1.7)], [img_weight/(1.3) , img_height/(1.7)], [img_weight, img_height/(1.25)],  [0 , img_height/(1.25)]], np.int32)
 #    pts = np.array([[img_weight/(30), img_height/(1.5)], [img_weight/(1) , img_height/(1.5)], [img_weight, img_height/(1)],  [0 , img_height/(1)]], np.int32)
@@ -744,11 +744,13 @@ def main():
     """
 
     filename = "C:/Users/namnh997/Documents/GitHub/Car-ML/car/Input/"
-
     moveForward(client)
+    
+    import time
     while True:
         responses = client.simGetImages([airsim.ImageRequest("0", airsim.ImageType.Scene, False, False)])
         for response in responses:
+            start = time.time()
             img1d = np.fromstring(response.image_data_uint8, dtype=np.uint8) 
             img_rgba = img1d.reshape(response.height, response.width, 4) 
             img_rgba1 = np.flipud(img_rgba)
@@ -756,6 +758,7 @@ def main():
             img_rgba = cv2.cvtColor(img_rgba, cv2.COLOR_BGRA2BGR)
             img_rgba = ld.process_image(img_rgba)
             cv2.imshow('Display window', img_rgba)
+            printt(time.time() - start)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                  break
     client.enableApiControl(False)
